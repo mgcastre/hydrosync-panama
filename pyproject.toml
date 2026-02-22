@@ -1,0 +1,11 @@
+[project]
+name = "hydrosync-panama"
+version = "0.1.0"
+requires-python = "==3.13.*"
+dependencies = [
+    "imhpa-api",
+    "jupyter>=1.1.1",
+]
+
+[tool.uv.sources]
+imhpa-api = { path = "../imhpa-api", editable = true }

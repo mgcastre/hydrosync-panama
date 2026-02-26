@@ -38,14 +38,15 @@ if not os.path.exists(local_dir_out):
     os.makedirs(local_dir_out)
 
 # Get list of sensors
-all_sensors = client.get_sensors()
+all_sensors = client.list_sensors(code=True)
 
 #  Loop through sensors and stations to retrieve and save data
 for sensor in all_sensors:
     logger.info(f"Processing sensor: {sensor}")
 
     stations_df = client.get_stations(sensor=sensor)
-    logger.info(f"Found {len(stations_df)} stations for sensor {sensor}")
+    stations_list = client.list_stations(sensor=sensor, ids=True)
+    logger.info(f"Found {len(stations_list)} stations for sensor {sensor}")
 
     output_path = f"{local_dir_out}/{sensor}"
     if not os.path.exists(output_path):
@@ -53,10 +54,11 @@ for sensor in all_sensors:
     
     csv_output = f"{output_path}/{sensor.lower()}_stations.csv"
     if not os.path.exists(csv_output):
+        stations_df = client.get_stations(sensor=sensor)
         stations_df.to_csv(csv_output, index=False)
         
     list_of_dfs = []
-    for station_id in stations_df['id']:
+    for station_id in stations_list:
         logger.info(f"Processing station: {station_id}")
         data_df = client.get_data(sensor=sensor, station_id=station_id)
         list_of_dfs.append(data_df)

@@ -82,9 +82,13 @@ def build_ingestion_timestamp(ingested_at: datetime, tz_name: str) -> dict:
         "timezone": tz_name,
     }
 
-def build_envelope(payload: dict, source_url: str, ingestion_timestamp: dict) -> dict:
+def build_envelope(payload: dict, source_url: str, 
+                   station: str, sensor: str,
+                   ingestion_timestamp: dict) -> dict:
     """Wrap the cleaned payload in an audit envelope."""
     return {
+        "station": station,
+        "sensor": sensor,
         "source_url": source_url,
         "ingestion_timestamp": ingestion_timestamp,
         "stripped_fields": FIELDS_TO_STRIP,
@@ -134,7 +138,12 @@ def run_ingest():
         for station in all_stations:
             raw_payload, source_url = pull_gauge_data(client, station, sensor)
             clean_payload = strip_fields(raw_payload, FIELDS_TO_STRIP)
-            envelope = build_envelope(clean_payload, source_url, ingestion_timestamp)
+            envelope = build_envelope(
+                payload=clean_payload, 
+                source_url=source_url,
+                station=station, sensor=sensor,
+                ingestion_timestamp=ingestion_timestamp,
+                )
             save_to_bronze(envelope, station, sensor, ingested_at)
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@
 #%%
 
 # Load libraries
-import re
 import json
 import pandas as pd
 from pathlib import Path
@@ -107,46 +106,33 @@ for date in df['ingestion_date'].unique():
 # Define bronze root
 BRONZE_ROOT = DATA_ROOT / "bronze"
 
-# Define function to extract sensor name from file path
-def extract_sensor(path):
-    stem = path.stem
-    stem = re.sub(r"^data_\d+_", "", stem)        ## drop 'data_{station_id}_'
-    stem = re.sub(r"_\d{8}T\d{6}Z$", "", stem)    ## drop '_20260328T162547Z'
-    return stem
-
-# Define function to extract station id from file path
-def extract_station_id(path):
-    stem = path.stem
-    stem = re.sub(r"^data_", "", stem)              ## drop 'data_'
-    stem = re.sub(r"_.+_\d{8}T\d{6}Z$", "", stem)   ## drop '_SENSOR_timestamp'
-    return stem
-
 # Extract all ingestion folders in bronze root
 bronze_ingestion_folders = []
-for folder_path in list(BRONZE_ROOT.glob("*")):
+for folder_path in BRONZE_ROOT.glob("ingested_date=*"):
     date_folder = str(folder_path).split("\\")[-1]
     bronze_ingestion_folders.append(date_folder)
 
 # Loop through all ingestion folders and create manifest for each
-for ingestion_date in bronze_ingestion_folders:
-    ingestion_batch = list((BRONZE_ROOT / ingestion_date).glob("data*.json"))
+for ingestion_folder in bronze_ingestion_folders:
+    ingestion_date = ingestion_folder.split("=")[-1]
+    ingestion_batch = list((BRONZE_ROOT / ingestion_folder).glob("data*.json"))
 
     sensor_station_pairs = []
     for file_path in ingestion_batch:
-        sensor = extract_sensor(file_path)
-        station_id = extract_station_id(file_path)
-        sensor_station_pairs.append((sensor, station_id))
-
-    my_date = ingestion_date.split("=")[-1]
+        with open(file_path, "r") as f:
+            data = json.load(f)
+            sensor = data['sensor']
+            station = data['station']
+            sensor_station_pairs.append((sensor, station))
         
     my_dict = {
-        "ingestion_date": my_date,
+        "ingestion_date": ingestion_date,
         "number_of_pairs": len(sensor_station_pairs),
         "sensor_station_pairs": sensor_station_pairs
         }
 
-    file_name = f"_ingestion_manifest_{my_date}.json"
-    with open(BRONZE_ROOT / ingestion_date / file_name, "w") as f:
+    file_name = f"{ingestion_date}_ingestion_manifest.json"
+    with open(BRONZE_ROOT / "_manifests" / file_name, "w") as f:
         json.dump(my_dict, f, indent=4)
 
 

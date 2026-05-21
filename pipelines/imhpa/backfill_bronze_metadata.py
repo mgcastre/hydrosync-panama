@@ -14,27 +14,17 @@ is added to record when the migration ran.
 import re
 import json
 import logging
-import platform
 from pathlib import Path
 from datetime import datetime, timezone
  
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
- 
-my_system = platform.system()
- 
-if my_system == "Windows":
-    BRONZE_ROOT = Path("D:/Dropbox/Panama_Data/IMHPA/bronze")
-elif my_system == "Linux":
-    BRONZE_ROOT = Path("/home/gaby/Dropbox/Panama_Data/IMHPA/bronze")
-else:
-    raise EnvironmentError(f"Unsupported operating system: {my_system}")
- 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
- 
+
+# Load external configurations
+from config.settings import BRONZE_ROOT
+
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"

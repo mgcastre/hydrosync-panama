@@ -12,7 +12,6 @@ bronze layer partitioned by ingestion date.
 # Load libraries
 import json
 import logging
-import platform
 from pathlib import Path
 from imhpa import ImhpaClient
 from zoneinfo import ZoneInfo
@@ -22,30 +21,18 @@ from datetime import datetime, timezone, timedelta
 # Configuration
 # ---------------------------------------------------------------------------
 
-# Fields that do not provide useful information
+# Load external configurations
+from config.settings import BRONZE_ROOT
+
+# Define constants
+
+## Fields that do not provide useful information
 FIELDS_TO_STRIP = ["lang_estacion", "satelitales_sensores"]
 
-# Define Panama timezone name string
+## Define Panama timezone name string
 PANAMA_TZ_NAME = "America/Panama"
 
-# Define bronze root directory
-my_system = system = platform.system()
-
-if my_system == "Windows":
-    BRONZE_ROOT = Path("D:/Dropbox/Panama_Data/IMHPA/bronze")
-elif my_system == "Linux":
-    BRONZE_ROOT = Path("/home/gaby/Dropbox/Panama_Data/IMHPA/bronze")
-else:
-    raise EnvironmentError(f"Unsupported operating system: {system}")
-
-# Load external configurations
-# with open("../../local/configs.json") as json_file:
-#    my_configs = json.load(json_file)
-
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s"
@@ -122,7 +109,7 @@ def save_to_bronze(
     return output_path
 
 # ---------------------------------------------------------------------------
-# Main
+# Entry point
 # ---------------------------------------------------------------------------
 
 def run_ingest():

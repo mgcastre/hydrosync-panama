@@ -20,7 +20,6 @@ Output paths:
 # Load libraries
 import json
 import logging
-import platform
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timezone
@@ -28,18 +27,16 @@ from datetime import datetime, timezone
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
- 
-my_system = platform.system()
- 
-if my_system == "Windows":
-    DATA_ROOT = Path("D:/Dropbox/Panama_Data/IMHPA")
-elif my_system == "Linux":
-    DATA_ROOT = Path("/home/gaby/Dropbox/Panama_Data/IMHPA")
-else:
-    raise EnvironmentError(f"Unsupported operating system: {my_system}")
 
-BRONZE_ROOT = DATA_ROOT / "bronze"
-LEGACY_ROOT = DATA_ROOT / "raw"
+# Load external configurations
+from config.settings import BRONZE_ROOT, LEGACY_ROOT
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -71,16 +68,6 @@ SENSOR_MAPPING = {
     "Velocidad del Viento a 10m": "VEL_VIENTO-VEL_VIENTO10",
     "Velocidad del Viento a 2m": "VEL_VIENTO2",
 }
-
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
- 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
-logger = logging.getLogger(__name__)
   
 # ---------------------------------------------------------------------------
 # Core functions

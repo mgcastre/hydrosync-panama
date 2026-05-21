@@ -119,19 +119,31 @@ def run_ingest():
     client = ImhpaClient()
     all_sensors = client.list_sensors(code=True)
 
+    saved = 0
+    failed = 0
+
     for sensor in all_sensors:
         all_stations = client.list_stations(sensor=sensor, ids=True)
 
         for station in all_stations:
-            raw_payload, source_url = pull_gauge_data(client, station, sensor)
-            clean_payload = strip_fields(raw_payload, FIELDS_TO_STRIP)
-            envelope = build_envelope(
-                payload=clean_payload, 
-                source_url=source_url,
-                station=station, sensor=sensor,
-                ingestion_timestamp=ingestion_timestamp,
-                )
-            save_to_bronze(envelope, station, sensor, ingested_at)
+            try:
+                raw_payload, source_url = pull_gauge_data(client, station, sensor)
+                clean_payload = strip_fields(raw_payload, FIELDS_TO_STRIP)
+                envelope = build_envelope(
+                    payload=clean_payload, 
+                    source_url=source_url,
+                    station=station, sensor=sensor,
+                    ingestion_timestamp=ingestion_timestamp,
+                    )
+                save_to_bronze(envelope, station, sensor, ingested_at)
+                saved += 1
+            
+            except Exception as e:
+                 failed += failed
+                 logger.error("Failed (%s, %s): %s", sensor, station, e)
+    
+    logger.info("Ingestion complete — saved: %d, failed: %d", saved, failed)
+
 
 if __name__ == "__main__":
     run_ingest()

@@ -79,7 +79,7 @@ def save_to_bronze(
     station: str,
     sensor: str,
     ingested_at: datetime,
-) -> Path:
+) -> None:
     """Write the envelope to the bronze layer as a partitioned JSON file."""
 
     # Build partition directory: .../ingested_date=YYYY-MM-DD/
@@ -98,7 +98,6 @@ def save_to_bronze(
     )
 
     logger.info("Saved to: %s", output_path)
-    return output_path
 
 # ---------------------------------------------------------------------------
 # Entry point

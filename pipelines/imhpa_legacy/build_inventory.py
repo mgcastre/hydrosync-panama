@@ -10,32 +10,15 @@ Description:
 import json
 import logging
 import sqlite3
-import platform
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
- 
-my_system = platform.system()
- 
-if my_system == "Windows":
-    DATA_ROOT = Path("D:/Dropbox/Panama_Data/IMHPA")
-elif my_system == "Linux":
-    DATA_ROOT = Path("/home/gaby/Dropbox/Panama_Data/IMHPA")
-else:
-    raise EnvironmentError(f"Unsupported operating system: {my_system}")
 
-LEGACY_ROOT = DATA_ROOT / "raw"
-BRONZE_ROOT = DATA_ROOT / "bronze"
-METADATA_DIR = DATA_ROOT / "_metadata"
-LOGS_DIR = DATA_ROOT / "_logs"
-
+from config.settings import LEGACY_ROOT, BRONZE_ROOT, METADATA_DIR, LOGS_DIR
 DB_PATH = METADATA_DIR / "imhpa_inventory.db"
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Database setup
@@ -47,18 +30,46 @@ def initialize_database(db_path: Path):
     """
     conn = sqlite3.connect(db_path)
     
-    conn.execute(
-        """
+    conn.execute(""""
         CREATE TABLE IF NOT EXISTS inventory (
-            sensor TEXT NOT NULL,
-            station_id TEXT NOT NULL,
-            first_seen TEXT NOT NULL,
-            last_seen TEXT NOT NULL,
-            times_seen INTEGER NOT NULL DEFAULT 0,
+            sensor      TEXT NOT NULL,
+            station_id  TEXT NOT NULL,
+            first_seen  TEXT NOT NULL,
+            last_seen   TEXT NOT NULL,
+            times_seen  INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (sensor, station_id)
         );
-        """
-    )
+
+        CREATE TABLE IF NOT EXISTS audit (
+            ingestion_date  TEXT NOT NULL,
+            sensor          TEXT NOT NULL,
+            station_id      TEXT NOT NULL,
+            present         INTEGER NOT NULL CHECK (present IN (0, 1)),
+            PRIMARY KEY (ingestion_date, sensor, station_id),
+            FOREIGN KEY (sensor, station_id)
+                REFERENCES inventory (sensor, station_id)
+        );
+    """)
     
     conn.commit()
     conn.close()
+
+# ---------------------------------------------------------------------------
+# Core functions
+# ---------------------------------------------------------------------------
+
+def load_manifests(manifests_dir):
+    file_paths = manifests_dir.glob("*.json")
+    
+    for file in file_path:
+        
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def run_builder():
+    initialize_database(db_path=DB_PATH)
+    # Load manifests
+    # Initialize inventory object
+    # Populate inventory object

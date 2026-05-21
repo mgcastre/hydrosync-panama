@@ -14,8 +14,9 @@ import json
 import logging
 from pathlib import Path
 from imhpa import ImhpaClient
-from zoneinfo import ZoneInfo
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+from pipelines.utils.timestamps import to_local_time
+from pipelines.utils.timestamps import PANAMA_TZ_NAME
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -24,13 +25,8 @@ from datetime import datetime, timezone, timedelta
 # Load external configurations
 from config.settings import BRONZE_ROOT
 
-# Define constants
-
-## Fields that do not provide useful information
+# Define fields that do not provide useful information
 FIELDS_TO_STRIP = ["lang_estacion", "satelitales_sensores"]
-
-## Define Panama timezone name string
-PANAMA_TZ_NAME = "America/Panama"
 
 # Setup logging
 logging.basicConfig(
@@ -57,15 +53,11 @@ def strip_fields(raw_payload: dict, fields: list) -> dict:
     return new_payload
 
 def build_ingestion_timestamp(ingested_at: datetime, tz_name: str) -> dict:
-    """Build a timezone-aware ingestion timestamp dictionary"""
-    if ingested_at.tzinfo is None or ingested_at.utcoffset() != timedelta(0):
-        raise ValueError("ingested_at must be a UTC-aware datetime.")
-
-    local_ingested_at = ingested_at.astimezone(ZoneInfo(tz_name))
-
+    """Build a timestamp dictionary with both UTC and local times."""
+    local_dt = to_local_time(ingested_at, tz_name)
     return {
         "utc": ingested_at.isoformat(),
-        "local": local_ingested_at.isoformat(),
+        "local": local_dt.isoformat(),
         "timezone": tz_name,
     }
 

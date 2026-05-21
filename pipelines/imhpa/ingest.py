@@ -1,5 +1,5 @@
 """
-Title: ingest_raw_data.py
+Title: ingest.py
 Author: M. G. Castrellon
 Date: March 2026
 
@@ -12,9 +12,9 @@ bronze layer partitioned by ingestion date.
 # Load libraries
 import json
 import logging
-from pathlib import Path
 from imhpa import ImhpaClient
 from datetime import datetime, timezone
+from pipelines.imhpa.audit import Manifest
 from pipelines.utils.timestamps import to_local_time
 from pipelines.utils.timestamps import PANAMA_TZ_NAME
 
@@ -78,7 +78,7 @@ def save_to_bronze(
     envelope: dict,
     station: str,
     sensor: str,
-    ingested_at: datetime,
+    ingested_at: datetime
 ) -> None:
     """Write the envelope to the bronze layer as a partitioned JSON file."""
 
@@ -106,6 +106,9 @@ def save_to_bronze(
 def run_ingest():
     ingested_at = datetime.now(timezone.utc)
     ingestion_timestamp = build_ingestion_timestamp(ingested_at, PANAMA_TZ_NAME)
+    
+    manifests_dir = BRONZE_ROOT / "_manifests"
+    manifest = Manifest(ingested_at, manifests_dir)
 
     client = ImhpaClient()
     all_sensors = client.list_sensors(code=True)
@@ -127,12 +130,14 @@ def run_ingest():
                     ingestion_timestamp=ingestion_timestamp,
                     )
                 save_to_bronze(envelope, station, sensor, ingested_at)
+                manifest.add_pairs(sensor, station)
                 saved += 1
             
             except Exception as e:
                  failed += failed
                  logger.error("Failed (%s, %s): %s", sensor, station, e)
     
+    manifest.write()
     logger.info("Ingestion complete — saved: %d, failed: %d", saved, failed)
 
 

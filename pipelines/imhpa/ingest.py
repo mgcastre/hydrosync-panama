@@ -130,7 +130,7 @@ def run_ingest():
                     ingestion_timestamp=ingestion_timestamp,
                     )
                 save_to_bronze(envelope, station, sensor, ingested_at)
-                manifest.add_pairs(sensor, station)
+                manifest.add_pair(sensor, station)
                 saved += 1
             
             except Exception as e:

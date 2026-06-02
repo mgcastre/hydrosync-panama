@@ -79,6 +79,7 @@ class Inventory:
         """)
 
     def upsert_inventory(self, manifest: dict):
+        pass
         # I am going to pretend the table is a csv, because I don't know
         # how to work with sql tables just yet.
         

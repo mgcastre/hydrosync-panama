@@ -1,8 +1,11 @@
 """
-storage_backend.py
+Title: storage_backend.py
+Author: M. G. Castrellon
+Date: 9 June 2026
 
-Author: M. G. Castrellón
-Date: June 2026
+Description:
+Defines a protocol for storage backends and provides implementations 
+for local filesystem, S3, and a fake in-memory backend for testing.
 """
 
 # Load libraries

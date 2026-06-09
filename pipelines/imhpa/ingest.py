@@ -12,18 +12,17 @@ bronze layer partitioned by ingestion date.
 # Load libraries
 import json
 import logging
+from pathlib import Path
 from imhpa import ImhpaClient
 from datetime import datetime, timezone
 from pipelines.imhpa.audit import Manifest
 from pipelines.utils.timestamps import to_local_time
 from pipelines.utils.timestamps import PANAMA_TZ_NAME
+from core.storage_backend import StorageBackend
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-
-# Load external configurations
-from config.settings import BRONZE_ROOT
 
 # Define fields that do not provide useful information
 FIELDS_TO_STRIP = ["lang_estacion", "satelitales_sensores"]
@@ -78,43 +77,43 @@ def save_to_bronze(
     envelope: dict,
     station: str,
     sensor: str,
-    ingested_at: datetime
+    ingested_at: datetime,
+    backend: StorageBackend
 ) -> None:
-    """Write the envelope to the bronze layer as a partitioned JSON file."""
-
-    # Build partition directory: .../ingested_date=YYYY-MM-DD/
-    date_str = ingested_at.strftime("%Y-%m-%d")
-    partition_dir = BRONZE_ROOT / f"ingested_date={date_str}"
-    partition_dir.mkdir(parents=True, exist_ok=True)
+    """Save the envelope to the bronze layer using the provided storage backend."""
 
     # Compact timestamp for the filename: 20250101T120000
     ts_compact = ingested_at.strftime("%Y%m%dT%H%M%S")
-    filename = f"data_{station}_{sensor}_{ts_compact}Z.json"
+    file_name = f"data_{station}_{sensor}_{ts_compact}Z.json"
 
-    output_path = partition_dir / filename
-    output_path.write_text(
-        json.dumps(envelope, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    # Build relative path: ingested_date=YYYY-MM-DD/file_name.json
+    date_str = ingested_at.strftime("%Y-%m-%d")
+    partition_dir = Path(f"ingested_date={date_str}")
+    relative_path = partition_dir / file_name
 
+    # Prepare content
+    json_string = json.dumps(envelope, ensure_ascii=False, indent=2)
+    content = json_string.encode("utf-8")
+
+    # Pass to backend storage handler and log
+    output_path = backend.save(content, relative_path)
     logger.info("Saved to: %s", output_path)
 
 # ---------------------------------------------------------------------------
-# Entry point
+# Orchestrator
 # ---------------------------------------------------------------------------
 
-def run_ingest():
+def run_ingest(backend: StorageBackend):
     ingested_at = datetime.now(timezone.utc)
     ingestion_timestamp = build_ingestion_timestamp(ingested_at, PANAMA_TZ_NAME)
-    
-    manifests_dir = BRONZE_ROOT / "_manifests"
-    manifest = Manifest(ingested_at, manifests_dir)
 
     client = ImhpaClient()
     all_sensors = client.list_sensors(code=True)
 
     saved = 0
     failed = 0
+
+    manifest = Manifest(ingested_at)
 
     for sensor in all_sensors:
         all_stations = client.list_stations(sensor=sensor, ids=True)
@@ -129,17 +128,30 @@ def run_ingest():
                     station=station, sensor=sensor,
                     ingestion_timestamp=ingestion_timestamp,
                     )
-                save_to_bronze(envelope, station, sensor, ingested_at)
+                save_to_bronze(envelope, station, sensor, ingested_at, backend)
                 manifest.add_pair(sensor, station)
                 saved += 1
             
             except Exception as e:
-                 failed += failed
+                 failed += 1
                  logger.error("Failed (%s, %s): %s", sensor, station, e)
     
-    manifest.write()
+    manifest.write(backend)
     logger.info("Ingestion complete — saved: %d, failed: %d", saved, failed)
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 if __name__ == "__main__":
-    run_ingest()
+
+    # Load backend and settings
+    from core.storage_backend import LocalStorage
+    from config.settings import BRONZE_ROOT
+
+    # Configure backend
+    local_storage = LocalStorage(root=Path(BRONZE_ROOT))
+    
+    # Run ingest
+    run_ingest(backend=local_storage)

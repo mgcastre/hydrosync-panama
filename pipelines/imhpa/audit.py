@@ -11,13 +11,13 @@ import json
 import sqlite3
 from pathlib import Path
 from datetime import datetime
+from core.storage_backend import StorageBackend
 
 # Define classes and functions
 
 class Manifest:
-    def __init__(self, ingested_at: datetime, manifests_dir: Path):
+    def __init__(self, ingested_at: datetime):
         self.ingested_at = ingested_at
-        self.manifests_dir = manifests_dir
         self.pairs = []
     
     @property
@@ -35,14 +35,11 @@ class Manifest:
     def add_pair(self, sensor: str, station: str):
         self.pairs.append((sensor, station))
     
-    def write(self):
-        self.manifests_dir.mkdir(parents=True, exist_ok=True)
-
+    def write(self, backend: StorageBackend) -> None:
+        content = json.dumps(self.as_dict, indent=4).encode("utf-8")
         file_name = f"{self.ingestion_date}_ingestion_manifest.json"
-        output_path = self.manifests_dir / file_name
-
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(self.as_dict, f, indent=4)
+        relative_path = Path("_manifests") / file_name
+        _ = backend.save(content, relative_path)
 
 
 class Inventory:
@@ -94,3 +91,4 @@ class Inventory:
     def update(self, manifest: dict):
         self.upsert_inventory(manifest)
         self.upsert_audit(manifest)
+        pass
